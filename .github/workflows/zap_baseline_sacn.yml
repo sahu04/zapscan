@@ -1,0 +1,44 @@
+name: ZAP Security Scan
+
+on:
+  pull_request:
+    paths:
+      - '**/*'
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Set Up Java
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: '11'
+
+    - name: Install ZAP
+      run: |
+        wget https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/ZAP_2.11.0_Linux.tar.gz
+        tar -xzvf ZAP_2.11.0_Linux.tar.gz
+        echo "export PATH=\$PATH:$(pwd)/ZAP_2.11.0/zap/" >> $GITHUB_ENV
+
+    - name: Show Path
+      run: echo $PATH
+
+    - name: Start ZAP Daemon
+      run: zap.sh -daemon -host 0.0.0.0 -port 8090
+
+    - name: Run ZAP Security Scan
+      run: |
+        zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} spider ${{ github.event.before }}
+        zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} active-scan ${{ github.event.before }}
+
+    - name: Analyze ZAP Results
+      run: |
+        # Add logic to analyze ZAP scan results and fail the build if needed
+
+    - name: Stop ZAP Daemon
+      run: zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} shutdown

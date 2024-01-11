@@ -16,7 +16,7 @@ jobs:
     - name: Set Up ZAP Work Directory
       run: |
         mkdir -p ${{ github.workspace }}/zap/wrk
-        echo "baseurl: https://github.com/sahu04/testing" > ${{ github.workspace }}/zap/wrk/zap.yaml
+        echo "baseurl: https://github.com/sahu04/zapscan.git" > ${{ github.workspace }}/zap/wrk/zap.yaml
 
     - name: ZAP Baseline Scan
       run: |

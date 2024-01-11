@@ -1,0 +1,38 @@
+name: ZAP Security Scan
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Scan the web application
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: testing
+          
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          # docker_name: 'owasp/zap2docker-stable'
+          target: 'https://github.com/sahu04/zapscan.git'
+          # rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+          
+      - name: Save ZAP Reports
+        run: |
+          mkdir -p ${{ github.workspace }}/zap_reports
+          mv report_html.html ${{ github.workspace }}/zap_reports/
+          mv report_md.md ${{ github.workspace }}/zap_reports/
+          mv report_xml.xml ${{ github.workspace }}/zap_reports/
+          mv report_json.json ${{ github.workspace }}/zap_reports/
+          
+      - name: Upload ZAP Reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: zap_reports
+          path: ${{ github.workspace }}/zap_reports

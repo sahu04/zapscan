@@ -1,4 +1,4 @@
-name: ZAP Baseline Scan
+name: ZAP Security Scan
 
 on:
   pull_request:
@@ -6,37 +6,27 @@ on:
       - '**.md'
 
 jobs:
-  zap_baseline_scan:
+  zap_security_scan:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-    - name: Set Up ZAP Work Directory
-      run: mkdir -p ${{ github.workspace }}/zap/wrk
+      - name: Set Up ZAP Work Directory
+        run: mkdir -p ${{ github.workspace }}/zap/wrk
 
-    - name: Run ZAP Baseline Scan
-      run: |
-        docker run -v ${{ github.workspace }}/zap/wrk:/zap/wrk/:rw --network=host \
-          -e ZAP_AUTH_HEADER -e ZAP_AUTH_HEADER_VALUE -e ZAP_AUTH_HEADER_SITE \
-          -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -c /zap/wrk/zap.yaml \
-          -J /zap/wrk/report_json.json -w /zap/wrk/report_md.md -r /zap/wrk/report_html.html 2> ${{ github.workspace }}/zap/wrk/error.log
-      env:
-        ZAP_AUTH_HEADER: your_auth_header_value
-        ZAP_AUTH_HEADER_VALUE: your_auth_header_site
+      - name: ZAP Security Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: ${{ github.event.before }}..${{ github.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
 
-    - name: Display ZAP Report
-      run: cat ${{ github.workspace }}/zap/wrk/report_md.md
+      - name: Display ZAP Report
+        run: cat ${{ github.workspace }}/zap/wrk/report_md.md
 
-    - name: Display ZAP Error Log
-      run: cat ${{ github.workspace }}/zap/wrk/error.log
-
-        ZAP_AUTH_HEADER: your_auth_header_value
-        ZAP_AUTH_HEADER_VALUE: your_auth_header_site
-
-    - name: Display ZAP Report
-      run: cat ${{ github.workspace }}/zap/wrk/report_md.md
-
-    - name: Display ZAP Error Log
-      run: cat ${{ github.workspace }}/zap/wrk/error.log
+      - name: Display ZAP Error Log
+        run: cat ${{ github.workspace }}/zap/wrk/error.log

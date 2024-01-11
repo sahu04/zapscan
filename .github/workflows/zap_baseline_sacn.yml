@@ -1,44 +1,35 @@
-name: ZAP Security Scan
+name: ZAP Baseline Scan
 
 on:
   pull_request:
-    paths:
-      - '**/*'
+    paths-ignore:
+      - '**.md'
 
 jobs:
-  zap_scan:
+  zap_baseline_scan:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
 
-    - name: Set Up Java
-      uses: actions/setup-java@v2
-      with:
-        distribution: 'adopt'
-        java-version: '11'
-
-    - name: Install ZAP
+    - name: Set Up ZAP Work Directory
       run: |
-        wget https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/ZAP_2.11.0_Linux.tar.gz
-        tar -xzvf ZAP_2.11.0_Linux.tar.gz
-        echo "export PATH=\$PATH:$(pwd)/ZAP_2.11.0/zap/" >> $GITHUB_ENV
+        mkdir -p ${{ github.workspace }}/zap/wrk
+        echo "baseurl: https://github.com/sahu04/testing" > ${{ github.workspace }}/zap/wrk/zap.yaml
 
-    - name: Show Path
-      run: echo $PATH
-
-    - name: Start ZAP Daemon
-      run: zap.sh -daemon -host 0.0.0.0 -port 8090
-
-    - name: Run ZAP Security Scan
+    - name: ZAP Baseline Scan
       run: |
-        zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} spider ${{ github.event.before }}
-        zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} active-scan ${{ github.event.before }}
+        docker run -v ${{ github.workspace }}/zap/wrk:/zap/wrk/:rw --network=host \
+          -e ZAP_AUTH_HEADER -e ZAP_AUTH_HEADER_VALUE -e ZAP_AUTH_HEADER_SITE \
+          -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -c /zap/wrk/zap.yaml \
+          -J /zap/wrk/report_json.json -w /zap/wrk/report_md.md -r /zap/wrk/report_html.html 2> /zap/wrk/error.log
+      env:
+        ZAP_AUTH_HEADER: your_auth_header_value
+        ZAP_AUTH_HEADER_VALUE: your_auth_header_site
 
-    - name: Analyze ZAP Results
-      run: |
-        # Add logic to analyze ZAP scan results and fail the build if needed
+    - name: Display ZAP Report
+      run: cat ${{ github.workspace }}/zap/wrk/report_md.md
 
-    - name: Stop ZAP Daemon
-      run: zap-cli --zap-url http://localhost:8090/ --api-key ${{ secrets.ZAP_API_KEY }} shutdown
+    - name: Display ZAP Error Log
+      run: cat ${{ github.workspace }}/zap/wrk/error.log
